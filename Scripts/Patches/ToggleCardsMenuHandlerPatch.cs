@@ -134,7 +134,7 @@ namespace ToggleCardsCategories.Patches {
                 List<Transform> cardsInMenu = grid.transform.Cast<Transform>().ToList();
 
                 foreach(var cardContent in cardsInMenu.Select(cardTransform => cardTransform.GetChild(2).gameObject.GetOrAddComponent<RectTransform>())) {
-                    cardContent.transform.GetChild(2).localScale = (localScale * Vector3.one * 10);
+                    cardContent.localScale = (localScale * Vector3.one * 10);
                 }
             }
         }

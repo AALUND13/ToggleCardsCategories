@@ -12,7 +12,7 @@ After you added the mod as dependency, you need to create a toggle categories fo
 ```Cs
 ToggleCardsCategoriesManager.instance.RegisterCategories(MyModInitials);
 ```
-This will make the mod create categories in that toggle mod section, By default all cards in the mod section will be put in the `Unknow` category
+This will make the mod create categories in that toggle mod section
 
 The mod will look for the interface `IToggleCardCategory` for each of your non hidden cards, So if you want put a specific card in a specific category you must implement the `IToggleCardCategory` for your custom card like this
 ```cs
@@ -33,7 +33,7 @@ After you have imported this library into your unity project, you need to create
 ```cs
 ToggleCardsCategoriesManager.instance.RegisterCategories(MyModInitials);
 ```
-This will make the mod create categories in that toggle mod section, By default all cards in the mod section will be put in the `Unknow` category
+This will make the mod create categories in that toggle mod section
 
 The mod will look for the interface `IToggleCardCategory` for each of your non hidden cards, So if you want put a specific card in a specific category you must the implement the `IToggleCardCategory` or since you in **Unity** you can add the the `AddToToggleCardCategory` component, and set the `CategoryPath` in the component
 

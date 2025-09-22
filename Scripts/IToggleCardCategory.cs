@@ -12,7 +12,7 @@ namespace ToggleCardsCategories {
     }
 
 
-    internal interface IToggleCardCategory {
+    public interface IToggleCardCategory {
         ToggleCardCategoryInfo GetCardCategoryInfo();
     }
 }

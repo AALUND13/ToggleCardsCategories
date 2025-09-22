@@ -57,7 +57,7 @@ namespace ToggleCardsCategories.Patches {
                         IToggleCardCategory toggleCardCategoryInfo = childGameObject.transform.GetChild(2).GetComponent<IToggleCardCategory>();
                         string categoryName = toggleCardCategoryInfo?.GetCardCategoryInfo().Name ?? "Unknow";
 
-                        ToggleCardsCategoryMenu toggleCardsCategory = ToggleCardsCategoryMenu.AddToggleCardToCategory(content, childGameObject, categoryName);
+                        ToggleCardsCategoryMenu toggleCardsCategory = ToggleCardsCategoryMenu.AddToggleCardToCategory(content, childGameObject, categoryName, category);
                         if(toggleCardCategoryInfo != null && toggleCardCategoryInfo.GetCardCategoryInfo().Priority != null) {
                             toggleCardsCategory.Priority = toggleCardCategoryInfo.GetCardCategoryInfo().Priority.Value;
                         }

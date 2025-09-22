@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f53b16b43f44db45911ff17aee4901d, type: 3}
   m_Name: ToggleCardsCategoriesInfo
   m_EditorClassIdentifier: 
-  ModName: 
-  Author: 
+  ModName: ToggleCardsCategories
+  Author: AALUND13
   Version: 1.0.0
   WebsiteURL: 
-  Description: 
+  Description: Create custom categories in your toggle mod section
   BeforeBuildCommand: 
   AfterBuildCommand: 
-  Dependencies: []
+  Dependencies:
+  - willis81808-UnboundLib-3.2.14
   DllDependencies: []
   AssemblyDefinitionDependencies: []
-  Icon: {fileID: 0}
+  Icon: {fileID: 2800000, guid: 201de65c1b57d7745a1dae3bc7616ff1, type: 3}
   IncludeInAllExports: 1

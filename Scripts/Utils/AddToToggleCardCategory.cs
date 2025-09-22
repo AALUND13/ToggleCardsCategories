@@ -3,7 +3,7 @@
 namespace ToggleCardsCategories.Utils {
     public class AddToToggleCardCategory : MonoBehaviour, IToggleCardCategory {
         [Header("Category Path")]
-        [Tooltip("The for the category for exmaple if the path is \"Classes\\MyClassHere\" it will create a category called \"MyClassHere\" in \"Classes\"")]
+        [Tooltip("The for the category for exmaple if the path is \"Classes/MyClassHere\" it will create a category called \"MyClassHere\" in \"Classes\"")]
         public string CategoryPath;
 
         [Header("Category Path")]
@@ -13,7 +13,7 @@ namespace ToggleCardsCategories.Utils {
         public int Priority = 0;
 
         public ToggleCardCategoryInfo GetCardCategoryInfo() {
-            return new ToggleCardCategoryInfo(CategoryPath, UsePriority ? Priority : null);
+            return new ToggleCardCategoryInfo(CategoryPath, UsePriority ? (int?)Priority : null);
         }
     }
 }

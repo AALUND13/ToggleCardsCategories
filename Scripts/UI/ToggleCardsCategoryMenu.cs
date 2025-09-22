@@ -21,15 +21,16 @@ namespace ToggleCardsCategories.UI {
 
         private bool isDisable {
             get {
-                if(haveNestedCategory) {
-                    return categories.All(c => c.isDisable);
-                } else {
+                if(categories.Count > 0) {
+                    if(categories.All(c => c.isDisable)) return true;
+                }
+                if(cardsInfo.Count > 0) {
                     var cardNames = cardsInfo.Select(ci => ci.name).ToList();
                     var relevantCards = CardManager.cards.Values
                         .Where(c => c.category == "AAC" && cardNames.Contains(c.cardInfo.name));
-                    if(!relevantCards.Any()) return false;
-                    return relevantCards.All(c => !c.enabled);
+                    if(relevantCards.All(c => !c.enabled)) return true;
                 }
+                return false;
             }
         }
 
@@ -38,8 +39,11 @@ namespace ToggleCardsCategories.UI {
         [SerializeField] private Button dropdownButton;
         [SerializeField] private Toggle toggleCardsButton;
 
-        [SerializeField] private GameObject darkenEffect;
         [SerializeField] private GameObject cardsContent;
+        [SerializeField] private GameObject categoriesContent;
+        [SerializeField] private GameObject viewport;
+
+        [SerializeField] private GameObject darkenEffect;
         [SerializeField] private TextMeshProUGUI categoryText;
         [SerializeField] private GridLayoutGroup gridLayoutGroup;
 
@@ -51,7 +55,6 @@ namespace ToggleCardsCategories.UI {
         private List<GameObject> categoryCardsContent = new List<GameObject>();
 
         private int categoryDepth;
-        private bool haveNestedCategory;
         private Action<bool> onToggle;
         private Action whenDropdown;
         private Action onContentAdded;
@@ -70,27 +73,8 @@ namespace ToggleCardsCategories.UI {
 
                 if(Menus.ContainsKey($"{modPrefix}/{fullPath}")) {
                     var menu = Menus[$"{modPrefix}/{fullPath}"];
-                    currentParent = menu.cardsContent;
+                    currentParent = menu.categoriesContent;
 
-                    if(menu.categoryContent.Count > 0 && !menu.haveNestedCategory) {
-                        throw new System.Exception(
-                            $"Cannot add nested category \"{segment}\" under \"{fullPath}\" " +
-                            "because that menu already contains cards and is not marked as nested."
-                        );
-                    } else if(!menu.haveNestedCategory) {
-                        menu.haveNestedCategory = true;
-
-                        Component.DestroyImmediate(menu.gridLayoutGroup);
-                        var group = menu.cardsContent.AddComponent<VerticalLayoutGroup>();
-                        group.padding = new RectOffset(5, 5, 5, 5);
-
-                        var contentSizeFitter = menu.cardsContent.AddComponent<ContentSizeFitter>();
-                        contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-                        menu.whenDropdown += () => {
-                            LayoutRebuilder.ForceRebuildLayoutImmediate(menu.cardsContent.GetComponent<RectTransform>());
-                        };
-                    }
                     previousMenu = menu;
                 } else if(!Menus.ContainsKey($"{modPrefix}/{fullPath}")) {
                     GameObject menuInstance = GameObject.Instantiate(Prefab);
@@ -101,44 +85,14 @@ namespace ToggleCardsCategories.UI {
                     newMenu.categoryDepth = i;
 
                     Menus.Add($"{modPrefix}/{fullPath}", newMenu);
-                    if(i != pathSegments.Length - 1) {
-                        newMenu.haveNestedCategory = true;
-
-                        Component.DestroyImmediate(newMenu.gridLayoutGroup);
-                        var group = newMenu.cardsContent.AddComponent<VerticalLayoutGroup>();
-                        group.padding = new RectOffset(5, 5, 5, 5);
-
-                        var contentSizeFitter = newMenu.cardsContent.AddComponent<ContentSizeFitter>();
-                        contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-                        newMenu.whenDropdown += () => {
-                            LayoutRebuilder.ForceRebuildLayoutImmediate(newMenu.cardsContent.GetComponent<RectTransform>());
-                        };
-
-                        if(previousMenu) {
-                            newMenu.onContentAdded += () => {
-                                LayoutRebuilder.ForceRebuildLayoutImmediate(previousMenu.cardsContent.GetComponent<RectTransform>());
-                            };
-                        }
-                    } else {
-                        newMenu.whenDropdown += () => {
-                            foreach(GameObject cardObject in newMenu.categoryCardsContent) {
-                                ToggleCardsMenuHandler.UpdateVisualsCardObj(cardObject);
-                            }
-                        };
-                    }
 
                     if(previousMenu) {
                         previousMenu.categories.Add(newMenu);
+                        previousMenu.categoriesContent.SetActive(true);
                     }
 
-                    currentParent = newMenu.cardsContent;
+                    currentParent = newMenu.categoriesContent;
                     previousMenu = newMenu;
-                } else if(Menus[$"{modPrefix}/{fullPath}"].haveNestedCategory && i == pathSegments.Length - 1) {
-                    throw new System.Exception(
-                        $"Cannot create final category \"{segment}\" because a nested category " +
-                        $"already exists at \"{fullPath}\"."
-                    );
                 }
             }
         }
@@ -146,13 +100,6 @@ namespace ToggleCardsCategories.UI {
         internal static ToggleCardsCategoryMenu AddToggleCardToCategory(GameObject parent, GameObject toggleCard, string categoryPath, string modPrefix) {
             if(!Menus.ContainsKey($"{modPrefix}/{categoryPath}")) CreateToggleCardsCategoryMenu(parent, categoryPath, modPrefix);
             var targetMenu = Menus[$"{modPrefix}/{categoryPath}"];
-            
-            if(targetMenu.haveNestedCategory) {
-                throw new System.Exception(
-                    $"Cannot add toggle card \"{toggleCard.name}\" to category \"{categoryPath}\" " +
-                    "because this category contains nested sub-categories."
-                );
-            }
 
             toggleCard.transform.SetParent(targetMenu.cardsContent.transform, false);
             targetMenu.categoryContent.Add(toggleCard);
@@ -203,12 +150,16 @@ namespace ToggleCardsCategories.UI {
         }
 
         public void ToggleDropdown() {
-            if(cardsContent.activeSelf) {
-                cardsContent.SetActive(false);
+            if(viewport.activeSelf) {
+                viewport.SetActive(false);
                 dropdownButton.image.sprite = dropdownCloseImage;
             } else {
-                cardsContent.SetActive(true);
+                viewport.SetActive(true);
                 dropdownButton.image.sprite = dropdownOpenImage;
+                
+                foreach(var toggleCards in categoryCardsContent) {
+                    ToggleCardsMenuHandler.UpdateVisualsCardObj(toggleCards);
+                }
             }
             whenDropdown?.Invoke();
         }
@@ -259,7 +210,7 @@ namespace ToggleCardsCategories.UI {
                 }
             }
 
-            float depthFactor = Mathf.Clamp01(1f - 0.025f * categoryDepth);
+            float depthFactor = Mathf.Clamp01(1f - 0.015f * (categoryDepth + 1));
             gridLayoutGroup.cellSize = cellSize * depthFactor;
             gridLayoutGroup.constraintCount = amount;
 
@@ -280,7 +231,7 @@ namespace ToggleCardsCategories.UI {
         }
 
         private void OnEnable() {
-            cardsContent.SetActive(false);
+            viewport.SetActive(false);
             dropdownButton.image.sprite = dropdownCloseImage;
 
             UpdateVisual();

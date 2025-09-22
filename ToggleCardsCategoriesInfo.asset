@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ModName: ToggleCardsCategories
   Author: AALUND13
-  Version: 1.0.0
+  Version: 1.0.1
   WebsiteURL: 
   Description: Create custom categories in your toggle mod section
   BeforeBuildCommand: 

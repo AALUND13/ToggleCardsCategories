@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ToggleCardsCategories {
     [BepInDependency("com.willis.rounds.unbound", BepInDependency.DependencyFlags.HardDependency)]
-    [BepInPlugin(modId, modName, "1.0.1")]
+    [BepInPlugin(modId, modName, "1.1.0")]
     [BepInProcess("Rounds.exe")]
     public class ToggleCardsCategories : BaseUnityPlugin {
         private const string modId = "com.aalund13.rounds.toggle_cards_categories";

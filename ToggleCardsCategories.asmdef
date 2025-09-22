@@ -1,0 +1,19 @@
+{
+  "allowUnsafeCode": true,
+  "overrideReferences": true,
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "references": [
+    "UnboundLib",
+    "Unity.TextMeshPro"
+  ],
+  "optionalUnityReferences": [],
+  "precompiledReferences": [
+    "0Harmony.dll",
+    "BepInEx.dll",
+    "Assembly-CSharp.dll"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "name": "ToggleCardsCategories"
+}

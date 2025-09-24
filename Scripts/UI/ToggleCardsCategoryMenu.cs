@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnboundLib;
@@ -11,8 +10,6 @@ using UnityEngine.UI;
 namespace ToggleCardsCategories.UI {
     public class ToggleCardsCategoryMenu : MonoBehaviour {
         public static GameObject Prefab;
-
-        public static Dictionary<string, ToggleCardsCategoryMenu> Menus = new Dictionary<string, ToggleCardsCategoryMenu>();
 
         public int Priority {
             get => gameObject.GetOrAddComponent<LayoutElement>().layoutPriority;
@@ -35,84 +32,32 @@ namespace ToggleCardsCategories.UI {
         }
 
         [SerializeField] private Sprite dropdownOpenImage;
-        [SerializeField] private Sprite dropdownCloseImage;
-        [SerializeField] private Button dropdownButton;
+        [SerializeField] internal Sprite dropdownCloseImage;
         [SerializeField] private Toggle toggleCardsButton;
+        [SerializeField] internal Button dropdownButton;
 
-        [SerializeField] private GameObject cardsContent;
-        [SerializeField] private GameObject categoriesContent;
-        [SerializeField] private GameObject viewport;
+        [SerializeField] internal GameObject viewport;
+        [SerializeField] internal GameObject cardsContent;
+        [SerializeField] internal GameObject categoriesContent;
 
         [SerializeField] private GameObject darkenEffect;
-        [SerializeField] private TextMeshProUGUI categoryText;
         [SerializeField] private GridLayoutGroup gridLayoutGroup;
+        [SerializeField] internal TextMeshProUGUI categoryText;
 
 
-        private List<CardInfo> cardsInfo = new List<CardInfo>();
-        private List<ToggleCardsCategoryMenu> categories = new List<ToggleCardsCategoryMenu>();
+        internal List<CardInfo> cardsInfo = new List<CardInfo>();
+        internal List<ToggleCardsCategoryMenu> categories = new List<ToggleCardsCategoryMenu>();
+        internal ToggleCardsCategoryMenu parentCategory = null;
 
-        private List<GameObject> categoryContent = new List<GameObject>();
-        private List<GameObject> categoryCardsContent = new List<GameObject>();
+        internal List<GameObject> categoryContent = new List<GameObject>();
+        internal List<GameObject> categoryCardsContent = new List<GameObject>();
 
-        private int categoryDepth;
-        private Action<bool> onToggle;
-        private Action whenDropdown;
-        private Action onContentAdded;
-
-
-        internal static void CreateToggleCardsCategoryMenu(GameObject parent, string categoryPath, string modPrefix) {
-            string[] pathSegments = categoryPath.Split('/');
-
-            string fullPath = pathSegments[0];
-            GameObject currentParent = parent;
-            ToggleCardsCategoryMenu previousMenu = null;
-
-            for(int i = 0; i < pathSegments.Length; i++) {
-                string segment = pathSegments[i];
-                if(i > 0) fullPath += $"/{segment}";
-
-                if(Menus.ContainsKey($"{modPrefix}/{fullPath}")) {
-                    var menu = Menus[$"{modPrefix}/{fullPath}"];
-                    currentParent = menu.categoriesContent;
-
-                    previousMenu = menu;
-                } else if(!Menus.ContainsKey($"{modPrefix}/{fullPath}")) {
-                    GameObject menuInstance = GameObject.Instantiate(Prefab);
-                    menuInstance.transform.SetParent(currentParent.transform, false);
-
-                    var newMenu = menuInstance.GetComponent<ToggleCardsCategoryMenu>();
-                    newMenu.categoryText.text = segment;
-                    newMenu.categoryDepth = i;
-
-                    Menus.Add($"{modPrefix}/{fullPath}", newMenu);
-
-                    if(previousMenu) {
-                        previousMenu.categories.Add(newMenu);
-                        previousMenu.categoriesContent.SetActive(true);
-                    }
-
-                    currentParent = newMenu.categoriesContent;
-                    previousMenu = newMenu;
-                }
-            }
-        }
-
-        internal static ToggleCardsCategoryMenu AddToggleCardToCategory(GameObject parent, GameObject toggleCard, string categoryPath, string modPrefix) {
-            if(!Menus.ContainsKey($"{modPrefix}/{categoryPath}")) CreateToggleCardsCategoryMenu(parent, categoryPath, modPrefix);
-            var targetMenu = Menus[$"{modPrefix}/{categoryPath}"];
-
-            toggleCard.transform.SetParent(targetMenu.cardsContent.transform, false);
-            targetMenu.categoryContent.Add(toggleCard);
-            targetMenu.categoryCardsContent.Add(toggleCard);
-            targetMenu.cardsInfo.Add(CardManager.GetCardInfoWithName(toggleCard.name));
-            targetMenu.onContentAdded?.Invoke();
-            return targetMenu;
-        }
+        internal int categoryDepth;
+        private bool LockIsDropdown;
 
 
         public void DisableCategory() {
             darkenEffect.SetActive(true);
-            onToggle?.Invoke(false);
 
             CardManager.DisableCards(cardsInfo.ToArray());
             foreach(var toggleCards in categoryCardsContent) {
@@ -122,7 +67,6 @@ namespace ToggleCardsCategories.UI {
 
         public void EnableCategory() {
             darkenEffect.SetActive(false);
-            onToggle?.Invoke(false);
 
             CardManager.EnableCards(cardsInfo.ToArray());
             foreach(var toggleCards in categoryCardsContent) {
@@ -130,9 +74,32 @@ namespace ToggleCardsCategories.UI {
             }
         }
 
+
+        public void CollapseCategory() {
+            if(viewport.activeSelf) {
+                viewport.SetActive(false);
+                dropdownButton.image.sprite = dropdownCloseImage;
+
+                UnityEngine.Debug.Log($"{categoryText.text} have been collapse");
+            }
+        }
+
+        public void ExpandCategory() {
+            if(!viewport.activeSelf) {
+                viewport.SetActive(true);
+                dropdownButton.image.sprite = dropdownOpenImage;
+
+                foreach(var toggleCards in categoryCardsContent) {
+                    ToggleCardsMenuHandler.UpdateVisualsCardObj(toggleCards);
+                }
+
+                UnityEngine.Debug.Log($"{categoryText.text} have been expanded");
+            }
+        }
+
+
         public void ToggleCategory(bool toggle) {
             darkenEffect.SetActive(!toggle);
-            onToggle?.Invoke(toggle);
 
             if(toggle) CardManager.EnableCards(cardsInfo.ToArray());
             else CardManager.DisableCards(cardsInfo.ToArray());
@@ -151,20 +118,40 @@ namespace ToggleCardsCategories.UI {
 
         public void ToggleDropdown() {
             if(viewport.activeSelf) {
-                viewport.SetActive(false);
-                dropdownButton.image.sprite = dropdownCloseImage;
+                CollapseCategory();
             } else {
-                viewport.SetActive(true);
-                dropdownButton.image.sprite = dropdownOpenImage;
-                
-                foreach(var toggleCards in categoryCardsContent) {
-                    ToggleCardsMenuHandler.UpdateVisualsCardObj(toggleCards);
-                }
+                ExpandCategory();
             }
-            whenDropdown?.Invoke();
         }
 
-        public void SetGridSize(int amount) {
+
+        public void UpdateVisual() {
+            bool allCardsDisabled = isDisable;
+
+            toggleCardsButton.onValueChanged.RemoveAllListeners();
+            toggleCardsButton.isOn = !allCardsDisabled;
+            toggleCardsButton.onValueChanged.AddListener(ToggleCategory);
+
+            if(allCardsDisabled) darkenEffect.SetActive(true);
+            else darkenEffect.SetActive(false);
+        }
+
+        public void LockDropdown() {
+            if(!LockIsDropdown) dropdownButton.image.color /= 2;
+        }
+
+        public void unLockDropdown() {
+            if(LockIsDropdown) dropdownButton.image.color *= 2;
+        }
+
+        internal void AddToggleCardToCategory(GameObject toggleCard) {
+            toggleCard.transform.SetParent(cardsContent.transform, false);
+            categoryContent.Add(toggleCard);
+            categoryCardsContent.Add(toggleCard);
+            cardsInfo.Add(CardManager.GetCardInfoWithName(toggleCard.name));
+        }
+
+        internal void SetGridSize(int amount) {
             if(gridLayoutGroup == null) return;
 
             Vector2 cellSize = new Vector2(220, 300);
@@ -219,21 +206,7 @@ namespace ToggleCardsCategories.UI {
             }
         }
 
-        public void UpdateVisual() {
-            bool allCardsDisabled = isDisable;
-
-            toggleCardsButton.onValueChanged.RemoveAllListeners();
-            toggleCardsButton.isOn = !allCardsDisabled;
-            toggleCardsButton.onValueChanged.AddListener(ToggleCategory);
-
-            if(allCardsDisabled) darkenEffect.SetActive(true);
-            else darkenEffect.SetActive(false);
-        }
-
         private void OnEnable() {
-            viewport.SetActive(false);
-            dropdownButton.image.sprite = dropdownCloseImage;
-
             UpdateVisual();
         }
     }

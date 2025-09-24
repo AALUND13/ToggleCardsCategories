@@ -1,7 +1,10 @@
 ﻿using BepInEx;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
+using ToggleCardsCategories.Extensions;
 using ToggleCardsCategories.UI;
 using UnboundLib;
 using UnboundLib.Utils;
@@ -13,12 +16,92 @@ namespace ToggleCardsCategories.Patches {
     [HarmonyPatch(typeof(ToggleCardsMenuHandler))]
     internal class ToggleCardsMenuHandlerPatch {
         public static List<GridLayoutGroup> Groups = new List<GridLayoutGroup>();
+        public static List<ToggleCardsCategoryMenu> MenuToCollapses = new List<ToggleCardsCategoryMenu>();
+        public static List<ToggleCardsCategoryMenu> ActiveMenus = new List<ToggleCardsCategoryMenu>();
+        public static Queue<Action> DelayActionQueue = new Queue<Action>();
+        public static bool AlreadyTrigger = false;
+        public static GameObject expandAllButton;
 
         [HarmonyPatch("ChangeCardColumnAmountMenus")]
         [HarmonyPrefix]
         public static void ChangeCardColumnAmountMenusPrefex(int amount) {
             foreach(var catgory in ToggleCardsCategoriesManager.instance.RegisteredCategories) {
                 CardManager.categories.Remove(catgory); // Remove the category so it not try access a non existing "GridLayoutGroup" and error out
+            }
+        }
+
+        [HarmonyPatch("UpdateVisualsCardObj")]
+        [HarmonyPrefix]
+        public static bool UpdateVisualsCardObjPrefix(GameObject cardObject) {
+            if(ToggleCardsCategoriesManager.instance.Menus.Select(c => c.Value.dropdownButton.gameObject).Contains(cardObject)) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        [HarmonyPatch("EnableCardsInCategory")]
+        [HarmonyPrefix]
+        public static void EnableCardsInCategoryPrefex(string category) {
+            if(ToggleCardsCategoriesManager.instance.RegisteredCategories.Contains(category)) expandAllButton.SetActive(true);
+            else expandAllButton.SetActive(false);
+        }
+
+        [HarmonyPatch("ActiveOnSearch")]
+        [HarmonyPostfix]
+        public static void ActiveOnSearchPostfix(string cardName, ref bool __result) {
+            string currentCategory = (string)ToggleCardsMenuHandler.instance.GetFieldValue("currentCategory");
+            string currentSearch = (string)ToggleCardsMenuHandler.instance.GetFieldValue("currentSearch");
+
+            if(ToggleCardsCategoriesManager.instance.RegisteredCategories.Contains(currentCategory) &&
+                ToggleCardsCategoriesManager.instance.CardsNameToMenuMapping[currentCategory].TryGetValue(cardName, out var menu) &&
+                __result
+            ) {
+                if(currentSearch != "") {
+                    DelayActionQueue.Enqueue(() => {
+                        if(!menu.viewport.activeSelf) {
+                            menu.ExpandCategory();
+                            if(!MenuToCollapses.Contains(menu)) {
+                                MenuToCollapses.Add(menu);
+                            }
+                        }
+
+                        var parentMenu = menu.parentCategory;
+                        while(parentMenu != null) {
+                            if(!parentMenu.viewport.activeSelf) {
+                                parentMenu.ExpandCategory();
+                                if(!MenuToCollapses.Contains(parentMenu)) {
+                                    MenuToCollapses.Add(parentMenu);
+                                }
+                            }
+
+                            parentMenu = parentMenu.parentCategory;
+                        }
+                    });
+
+                    if(!ActiveMenus.Contains(menu)) {
+                        ActiveMenus.Add(menu);
+                    }
+
+                    var parentMenu = menu.parentCategory;
+                    while(parentMenu != null) {
+                        if(!ActiveMenus.Contains(parentMenu)) {
+                            ActiveMenus.Add(parentMenu);
+                        }
+
+                        parentMenu = parentMenu.parentCategory;
+                    }
+                } else {
+                    foreach(var menuToCollapse in MenuToCollapses) {
+                        if(ActiveMenus.Contains(menuToCollapse)) {
+                            ActiveMenus.Remove(menuToCollapse);
+                        }
+                    }
+                }
+            }
+
+            if(ToggleCardsCategoriesManager.instance.Menus.Select(c => c.Value.dropdownButton.name).Contains(cardName)) {
+                __result = true;
             }
         }
 
@@ -29,7 +112,7 @@ namespace ToggleCardsCategories.Patches {
                 CardManager.categories.Add(catgory); // Then we add back the category so nothing break
             }
 
-            foreach(var category in ToggleCardsCategoryMenu.Menus.Values) {
+            foreach(var category in ToggleCardsCategoriesManager.instance.Menus.Values) {
                 category.SetGridSize(amount);
             }
 
@@ -39,6 +122,47 @@ namespace ToggleCardsCategories.Patches {
         [HarmonyPatch("Start")]
         [HarmonyPostfix]
         public static void StartPostfix() {
+            var searchBar = ToggleCardsMenuHandler.cardMenuCanvas.transform.Find("CardMenu/Top/InputField").gameObject;
+            var toggleAllButton = ToggleCardsMenuHandler.cardMenuCanvas.transform.Find("CardMenu/Top/ToggleAll").gameObject;
+
+            searchBar.GetComponent<TMP_InputField>().onValueChanged.AddListenerLast(value => {
+                UnityEngine.Debug.Log("Value Chnage");
+                DelayActionQueue.Clear();
+                ToggleCardsCategoriesManager.instance.StopAllCoroutines();
+                ToggleCardsCategoriesManager.instance.ExecuteAfterFrames(1, () => {
+                    UnityEngine.Debug.Log("Delay trigger");
+                    while(DelayActionQueue.Count > 0) {
+                        UnityEngine.Debug.Log("Invoke Delay Action");
+                        var action = DelayActionQueue.Dequeue();
+                        action();
+                    }
+
+                    foreach(var menuToCollapse in MenuToCollapses.ToList()) {
+
+                        if(!ActiveMenus.Contains(menuToCollapse)) {
+                            menuToCollapse.CollapseCategory();
+                            MenuToCollapses.Remove(menuToCollapse);
+                        }
+                        ActiveMenus.Remove(menuToCollapse);
+                    }
+                });
+            });
+
+            expandAllButton = GameObject.Instantiate(toggleAllButton, toggleAllButton.transform.parent);
+            expandAllButton.GetComponentInChildren<TextMeshProUGUI>().text = "Expand All";
+            expandAllButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            expandAllButton.GetComponent<Button>().onClick.AddListener(() => {
+                string currentCategory = (string)ToggleCardsMenuHandler.instance.GetFieldValue("currentCategory");
+                if(ToggleCardsCategoriesManager.instance.RegisteredCategories.Contains(currentCategory)) {
+                    var menus = ToggleCardsCategoriesManager.instance.GetCategoriesByMod(currentCategory);
+                    foreach(var menu in menus) {
+                        menu.ExpandCategory();
+                    }
+                }
+            });
+            expandAllButton.transform.localPosition = new Vector3(416.6898f, 105.7931f, 0);
+            expandAllButton.SetActive(false);
+
             ToggleCardsCategories.Instance.ExecuteAfterSeconds(0.75f, () => {
                 Dictionary<string, List<GameObject>> cardObjectsInCategory = (Dictionary<string, List<GameObject>>)ToggleCardsMenuHandler.instance.GetFieldValue("cardObjectsInCategory");
                 foreach(var category in ToggleCardsCategoriesManager.instance.RegisteredCategories) {
@@ -73,7 +197,7 @@ namespace ToggleCardsCategories.Patches {
                         } else {
                             string categoryName = toggleCardCategoryInfo.GetCardCategoryInfo().Name;
 
-                            ToggleCardsCategoryMenu toggleCardsCategory = ToggleCardsCategoryMenu.AddToggleCardToCategory(categoriesGroup, childGameObject, categoryName, category);
+                            ToggleCardsCategoryMenu toggleCardsCategory = ToggleCardsCategoriesManager.instance.AddToggleCardToCategory(categoriesGroup, childGameObject, categoryName, category);
                             if(toggleCardCategoryInfo != null && toggleCardCategoryInfo.GetCardCategoryInfo().Priority != null) {
                                 toggleCardsCategory.Priority = toggleCardCategoryInfo.GetCardCategoryInfo().Priority.Value;
                             }

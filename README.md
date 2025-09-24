@@ -44,8 +44,8 @@ The the `ToggleCardsCategoryMenu` have a static dictionary of category and the `
 ```cs
 void Start() {
 	this.ExecuteAfterSeconds(1, () => {
-		if(ToggleCardsCategoryMenu.Menus.ContainsKey("MyModInitials/Classes")) {
-			ToggleCardsCategoryMenu.Menus["MyModInitials/Classes"].Priority = 10;
+		if(oggleCardsCategoriesManager.instance.Menus.ContainsKey("MyModInitials/Classes")) {
+			oggleCardsCategoriesManager.instance.Menus["MyModInitials/Classes"].Priority = 10;
 		}
 	})
 }

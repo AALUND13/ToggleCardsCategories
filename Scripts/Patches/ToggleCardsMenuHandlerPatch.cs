@@ -83,13 +83,13 @@ namespace ToggleCardsCategories.Patches {
                         ActiveMenus.Add(menu);
                     }
 
-                    var parentMenu = menu.parentCategory;
-                    while(parentMenu != null) {
-                        if(!ActiveMenus.Contains(parentMenu)) {
-                            ActiveMenus.Add(parentMenu);
+                    var activeParentMenu = menu.parentCategory;
+                    while(activeParentMenu != null) {
+                        if(!ActiveMenus.Contains(activeParentMenu)) {
+                            ActiveMenus.Add(activeParentMenu);
                         }
 
-                        parentMenu = parentMenu.parentCategory;
+                        activeParentMenu = activeParentMenu.parentCategory;
                     }
                 } else {
                     foreach(var menuToCollapse in MenuToCollapses) {

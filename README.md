@@ -40,12 +40,12 @@ The mod will look for the interface `IToggleCardCategory` for each of your non h
 After you does that on all your cards you should be able to build your mods, and see your cards have be put in categories
 
 # Extra Tips
-The the `ToggleCardsCategoryMenu` have a static dictionary of category and the `ToggleCardsCategoryMenu` instance called `Menus` , the `ToggleCardsCategoryMenu` instance also have the `Priority` property, there is some example code:
+The the `ToggleCardsCategoriesManager` have a static dictionary of category and the `ToggleCardsCategoryMenu` instance called `Menus` , the `ToggleCardsCategoryMenu` instance also have the `Priority` property, there is some example code:
 ```cs
 void Start() {
 	this.ExecuteAfterSeconds(1, () => {
-		if(oggleCardsCategoriesManager.instance.Menus.ContainsKey("MyModInitials/Classes")) {
-			oggleCardsCategoriesManager.instance.Menus["MyModInitials/Classes"].Priority = 10;
+		if(ToggleCardsCategoriesManager.instance.Menus.ContainsKey("MyModInitials/Classes")) {
+			ToggleCardsCategoriesManager.instance.Menus["MyModInitials/Classes"].Priority = 10;
 		}
 	})
 }

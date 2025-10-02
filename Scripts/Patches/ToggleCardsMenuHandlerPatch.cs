@@ -175,12 +175,12 @@ namespace ToggleCardsCategories.Patches {
                     Component.DestroyImmediate(content.GetComponent<GridLayoutGroup>());
 
                     var group = content.AddComponent<VerticalLayoutGroup>();
-                    group.padding = new RectOffset(5, 5, 5, 5);
 
                     var categoriesGroup = new GameObject("Categories Content", typeof(VerticalLayoutGroup));
                     var categoriesGroupGrid = categoriesGroup.GetComponent<VerticalLayoutGroup>();
                     categoriesGroup.transform.SetParent(content.transform, false);
                     categoriesGroupGrid.spacing = 5;
+                    categoriesGroupGrid.padding = new RectOffset(5, 5, 5, 5);
 
                     var cardsGroup = new GameObject("Cards Content", typeof(GridLayoutGroup));
                     var cardsGroupGrid = cardsGroup.GetComponent<GridLayoutGroup>();

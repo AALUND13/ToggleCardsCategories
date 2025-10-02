@@ -18,16 +18,19 @@ namespace ToggleCardsCategories.UI {
 
         private bool isDisable {
             get {
-                if(categories.Count > 0) {
-                    if(categories.All(c => c.isDisable)) return true;
-                }
+                bool categoriesDisabled = categories.Count == 0 || categories.All(c => c.isDisable);
+
+                bool cardsDisabled = true;
                 if(cardsInfo.Count > 0) {
                     var cardNames = cardsInfo.Select(ci => ci.name).ToList();
                     var relevantCards = CardManager.cards.Values
-                        .Where(c => c.category == "AAC" && cardNames.Contains(c.cardInfo.name));
-                    if(relevantCards.All(c => !c.enabled)) return true;
+                        .Where(c => ToggleCardsCategoriesManager.instance.RegisteredCategories.Contains(c.category)
+                                 && cardNames.Contains(c.cardInfo.name));
+
+                    cardsDisabled = relevantCards.All(c => !c.enabled);
                 }
-                return false;
+
+                return categoriesDisabled && cardsDisabled;
             }
         }
 
